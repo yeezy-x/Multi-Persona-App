@@ -1,24 +1,19 @@
 "use client";
 
 import { useState } from "react";
-
 type Props = {
   onSend: (message: string) => void;
 };
 
-export function ChatInput({
-  onSend,
-}: Props) {
-  const [input, setInput] =
-    useState("");
+const {user}=useAuth()
 
+export function ChatInput({onSend}: Props) {
+  const [input, setInput] = useState("");
   function handleSubmit() {
     if (!input.trim()) {
       return;
     }
-
     onSend(input);
-
     setInput("");
   }
 
@@ -26,12 +21,10 @@ export function ChatInput({
     <div className="mx-auto flex w-full max-w-4xl items-center gap-3">
       <input
         value={input}
-        onChange={(e) =>
-          setInput(e.target.value)
-        }
+        onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            handleSubmit();
+            
           }
         }}
         placeholder="Send a message..."
@@ -40,8 +33,7 @@ export function ChatInput({
 
       <button
         onClick={handleSubmit}
-        className="rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500"
-      >
+        className="rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500">
         Send
       </button>
     </div>

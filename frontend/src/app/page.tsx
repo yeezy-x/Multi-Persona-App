@@ -1,7 +1,6 @@
 "use client";
 
 import { ChatContainer } from "../components/chat/ChatContainer";
-import { Sidebar } from "../components/sidebar/Sidebar";
 
 export default function HomePage() {
   return (

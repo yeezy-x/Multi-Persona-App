@@ -111,7 +111,7 @@ export async function streamMessage(req:Request,res:Response){
     }
     const session=await getSessionById(sessionId);
     if(!session!.title){
-        const generatedTitle=message.split("").slice(0,4).join(" ")
+        const generatedTitle=message.split("").slice(0,15).join(" ")
         await updateSessionTitle(sessionId,generatedTitle)
     }
     const memory=new ConversationMemory();

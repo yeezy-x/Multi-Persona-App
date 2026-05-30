@@ -1,10 +1,13 @@
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 function RootLayout({children}:{children:React.ReactNode}) {
     return (
         <html>
             <body>
-                {children}
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
             </body>
         </html>
     )
