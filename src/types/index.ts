@@ -19,3 +19,8 @@ export type Provider={
         messages:ChatMessage[],
     )=> Promise<string>
 }
+
+export type ModelResponse = {
+  model: string;
+  content: string;
+};

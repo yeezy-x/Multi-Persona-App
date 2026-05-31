@@ -1,5 +1,5 @@
 import axios from "axios";
-import type {sendMessagePayload} from "../types/chat"
+import type {SendMessagePayload} from "../types/chat"
 
 const API ="http://localhost:3000/api/chat";
 
@@ -8,26 +8,9 @@ export async function createSession() {
   return response.data.session;
 }
 
-export async function streamMessage(payload: sendMessagePayload, onChunk: (chunk: string) => void) {
-  const response=await fetch(`${API}/stream`,{
-    method:"POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-  if(!response.body){
-    return;
-  }
-  const reader=response.body.getReader();
-  const decoder=new TextDecoder();
-  while(true){
-    const {done,value}=await reader.read();
-    if(done){
-      break;
-    }
-    onChunk(decoder.decode(value));
-  }
+export async function sendMessage(payload:SendMessagePayload){
+  const response=await axios.post(`${API}/message`,payload);
+  return response.data.responses
 }
 
 export async function getSessions() {

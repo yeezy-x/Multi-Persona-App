@@ -9,55 +9,42 @@ import type {
 
 import {
   createSession,
+  sendMessage,
   getSession,
   getSessions,
-  streamMessage,
-  deleteSession
+  deleteSession,
 } from "@/services/chatService";
 
 import { models } from "@/lib/models";
 import { personas } from "@/lib/personas";
 
 import { Sidebar } from "../sidebar/Sidebar";
-
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 
-import { ModelSelector } from "../selectors/ModelSelector";
-import { PersonaSelector } from "../selectors/PersonaSelector";
-
 export function ChatContainer() {
-  const [messages, setMessages] =
-    useState<Message[]>([]);
-
-  const [sessions, setSessions] =
-    useState<Session[]>([]);
-
-  const [sessionId, setSessionId] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [selectedModel, setSelectedModel] =
-    useState(models[0]!.id);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionId, setSessionId] =useState("");
+  const [loading, setLoading] =useState(false);
+  const [selectedModels,setSelectedModels] =
+  useState<string[]>([
+    "openai/gpt-4.1-mini",
+    "google/gemini-2.5-flash-preview",
+    "deepseek/deepseek-chat-v3",
+  ]);
 
   const [selectedPersona, setSelectedPersona] =
     useState(personas[0]!.id);
 
   useEffect(() => {
     async function initialize() {
-      const session =
-        await createSession();
-
+      const session = await createSession();
       setSessionId(session.id);
 
-      const allSessions =
-        await getSessions();
-
+      const allSessions = await getSessions();
       setSessions(allSessions);
     }
-
     initialize();
   }, []);
 
@@ -80,45 +67,23 @@ export function ChatContainer() {
 
     setLoading(true);
 
-    let streamedText = "";
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "",
-      },
-    ]);
-
     try {
-      await streamMessage(
+      const responses=await sendMessage({
+        sessionId,
+        message:input,
+        models:selectedModels,
+        persona:selectedPersona
+      })
+
+      setMessages((prev)=>[
+        ...prev,
         {
-          sessionId,
-          model: selectedModel,
-          persona: selectedPersona,
-          message: input,
-        },
-        (chunk) => {
-          streamedText += chunk;
-
-          setMessages((prev) => {
-            const updated = [...prev];
-
-            updated[
-              updated.length - 1
-            ] = {
-              role: "assistant",
-              content: streamedText,
-            };
-
-            return updated;
-          });
+          role:"assistant",
+          responses,
         }
-      );
+      ])
 
-      const updatedSessions =
-        await getSessions();
-
+      const updatedSessions = await getSessions();
       setSessions(updatedSessions);
     } catch (error) {
       console.error(error);
@@ -131,19 +96,10 @@ export function ChatContainer() {
     id: string
   ) {
     try {
-      const session =
-        await getSession(id);
-
+      const session =await getSession(id);
       setSessionId(id);
-
       setMessages(
-        session.messages.map(
-          (message: any) => ({
-            role: message.role,
-            content:
-              message.content,
-          })
-        )
+        session.messages
       );
     } catch (error) {
       console.error(error);
@@ -164,18 +120,25 @@ export function ChatContainer() {
     setSessions(updatedSessions);
   }
 
-  async function handleDeleteSession(id:string){
-    try{
+  async function handleDeleteSession(
+    id: string
+  ) {
+    try {
       await deleteSession(id);
-      const updatedSessions=await getSessions();
+
+      const updatedSessions =
+        await getSessions();
+
       setSessions(updatedSessions);
-      if(id==sessionId){
-        setMessages([])
+
+      if (id === sessionId) {
+        setMessages([]);
       }
-    }catch(error){
+    } catch (error) {
       console.error(error);
     }
   }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black text-white">
       <Sidebar
@@ -184,28 +147,35 @@ export function ChatContainer() {
         onSelect={handleSelectSession}
         onNewChat={handleNewChat}
         onDelete={handleDeleteSession}
+        selectedModel={selectedModels}
+        selectedPersona={selectedPersona}
+        onModelChange={(value) => setSelectedModels(value as string[])}
+        onPersonaChange={setSelectedPersona}
+        models={models}
+        personas={personas}
       />
 
       <section className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-950 px-6 py-4">
-          <ModelSelector
-            value={selectedModel}
-            onChange={setSelectedModel}
-            options={models}
-          />
-
-          <PersonaSelector
-            value={selectedPersona}
-            onChange={setSelectedPersona}
-            options={personas}
-          />
-        </div>
-
         <div className="flex-1 overflow-hidden">
-          <ChatMessages
-            messages={messages}
-            loading={loading}
-          />
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-2xl text-center">
+                <h1 className="mb-4 text-5xl font-bold">
+                  AI Fusion
+                </h1>
+
+                <p className="text-zinc-400">
+                  Compare multiple AI
+                  models side-by-side
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ChatMessages
+              messages={messages}
+              loading={loading}
+            />
+          )}
         </div>
 
         <div className="border-t border-zinc-800 bg-zinc-950 p-4">

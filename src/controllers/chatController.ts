@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import {createSession,saveMessage,getSessionById, getSessionMessages,deleteSession} from "../services/sessionService.js";
-import { generateResponse } from "../chat/generateResponse.js";
-import { generateStreamingResponse } from "../chat/generateStreamingResponse.js";
+import { generateAIResponse } from "../providers/openRouter.js";
 import { personas } from "../personas/index.js";
 import { ConversationMemory } from "../memory/conversationMemory.js";
 import {sendMessageSchema} from "../validators/chatValidators.js";
@@ -27,7 +26,7 @@ export async function createChatSession(_req: Request,res: Response) {
 export async function sendMessage(req:Request,res:Response){
     try{
         const validatedData=sendMessageSchema.parse(req.body);
-        const {sessionId, message, persona, model} = validatedData;
+        const {sessionId, message, persona, models} = validatedData;
         const selectedPersona=personas[persona as keyof typeof personas];
         if(!selectedPersona){
             return res.status(400).json({
@@ -46,12 +45,21 @@ export async function sendMessage(req:Request,res:Response){
             memory.addMessage(msg.role,msg.content);
           }
         })
-        const aiResponse=await generateResponse(model,selectedPersona.systemPrompt,memory,message);
+        const responses=await Promise.all(
+          models.map(async (modelId)=>({
+            model:modelId,
+            content:await generateAIResponse(
+              modelId,
+              selectedPersona.systemPrompt,
+              memory,
+              message)
+          }))
+        )
         await saveMessage(sessionId,"user",message);
-        await saveMessage(sessionId,"assistant",aiResponse);
+        await saveMessage(sessionId,"assistant",JSON.stringify(responses));
         res.status(200).json({
             success:true,
-            response:aiResponse,
+            responses,
         })
     }catch(error){
         console.log(error)
@@ -72,9 +80,14 @@ export async function getChatSession(req:Request<{sessionId: string}>,res:Respon
         message:"Session not found",
       })
     }
+    let messages=session.messages.map((msg)=>({
+      role:msg.role,
+      content:msg.role==="user"?msg.content:undefined,
+      responses:msg.role==="assistant"?JSON.parse(msg.content):undefined,
+    }))
     res.status(200).json({
       success:true,
-      session,
+      messages,
     })
   }catch(error){
     res.status(500).json({
@@ -94,51 +107,6 @@ export async function getSessions(_req:Request, res:Response){
       success:false,
       message:"Failed to fetch sessions"
     })
-  }
-}
-
-//parse schema body
-export async function streamMessage(req:Request,res:Response){
-  try{
-    const validatedData=sendMessageSchema.parse(req.body);
-    const {sessionId, message, persona, model} = validatedData;
-    const selectedPersona=personas[persona as keyof typeof personas];
-    if(!selectedPersona){
-        return res.status(400).json({
-            success:false,
-            message:"Invalid persona selected",
-        })
-    }
-    const session=await getSessionById(sessionId);
-    if(!session!.title){
-        const generatedTitle=message.split("").slice(0,15).join(" ")
-        await updateSessionTitle(sessionId,generatedTitle)
-    }
-    const memory=new ConversationMemory();
-    session!.messages.forEach((msg)=>{
-      if(msg.role==="user" || msg.role==="assistant"){
-        memory.addMessage(msg.role,msg.content);
-      }
-    })
-    res.setHeader("Content-Type","text/plain");
-    res.setHeader("Transfer-Encoding","chunked");
-    let fullResponse="";
-    await generateStreamingResponse(
-      model,
-      selectedPersona.systemPrompt,
-      memory,
-      message,
-      (chunk) => {
-        fullResponse += chunk;
-        res.write(chunk);
-      }
-    );
-    await saveMessage(sessionId,"user",message);
-    await saveMessage(sessionId,"assistant",fullResponse);
-    res.end();
-  }catch(error){
-    console.log(error)
-    throw new Error("Failed to stream message")
   }
 }
 

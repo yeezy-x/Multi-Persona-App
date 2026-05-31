@@ -1,19 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+
 type Props = {
   onSend: (message: string) => void;
 };
 
-const {user}=useAuth()
+export function ChatInput({
+  onSend,
+}: Props) {
+  const [input, setInput] =
+    useState("");
 
-export function ChatInput({onSend}: Props) {
-  const [input, setInput] = useState("");
+  const router = useRouter();
+
+  const { user } =
+    useAuth();
+
+  function requireAuth() {
+    if (!user) {
+      router.push("/signin");
+      return false;
+    }
+
+    return true;
+  }
+
   function handleSubmit() {
+    if (!requireAuth()) {
+      return;
+    }
+
     if (!input.trim()) {
       return;
     }
+
     onSend(input);
+
     setInput("");
   }
 
@@ -21,10 +46,19 @@ export function ChatInput({onSend}: Props) {
     <div className="mx-auto flex w-full max-w-4xl items-center gap-3">
       <input
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) =>
+          setInput(
+            e.target.value
+          )
+        }
+        onFocus={() => {
+          requireAuth();
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            
+          if (
+            e.key === "Enter"
+          ) {
+            handleSubmit();
           }
         }}
         placeholder="Send a message..."
@@ -33,7 +67,8 @@ export function ChatInput({onSend}: Props) {
 
       <button
         onClick={handleSubmit}
-        className="rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500">
+        className="rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500"
+      >
         Send
       </button>
     </div>
