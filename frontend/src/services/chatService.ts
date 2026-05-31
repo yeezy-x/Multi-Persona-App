@@ -20,6 +20,7 @@ export async function getSessions() {
 
 export async function getSession(sessionId: string) {
   const response=await axios.get(`${API}/session/${sessionId}`);
+  console.log("SESSION DETAILS:", response.data.session);
   return response.data.session;
 }
 

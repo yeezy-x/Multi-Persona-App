@@ -30,7 +30,7 @@ export function ChatContainer() {
   const [selectedModels,setSelectedModels] =
   useState<string[]>([
     "openai/gpt-4.1-mini",
-    "google/gemini-2.5-flash-preview",
+    "google/gemini-2.5-flash",
     "deepseek/deepseek-chat-v3",
   ]);
 
@@ -48,13 +48,10 @@ export function ChatContainer() {
     initialize();
   }, []);
 
-  async function handleSendMessage(
-    input: string
-  ) {
+  async function handleSendMessage(input: string) {
     if (!input.trim() || !sessionId) {
       return;
     }
-
     const userMessage: Message = {
       role: "user",
       content: input,
@@ -92,31 +89,22 @@ export function ChatContainer() {
     }
   }
 
-  async function handleSelectSession(
-    id: string
-  ) {
+  async function handleSelectSession(id: string) {
     try {
       const session =await getSession(id);
+      if(!session) return;
       setSessionId(id);
-      setMessages(
-        session.messages
-      );
+      setMessages(session.messages ?? []);
     } catch (error) {
       console.error(error);
     }
   }
 
   async function handleNewChat() {
-    const session =
-      await createSession();
-
+    const session = await createSession();
     setSessionId(session.id);
-
     setMessages([]);
-
-    const updatedSessions =
-      await getSessions();
-
+    const updatedSessions = await getSessions();
     setSessions(updatedSessions);
   }
 
@@ -147,7 +135,7 @@ export function ChatContainer() {
         onSelect={handleSelectSession}
         onNewChat={handleNewChat}
         onDelete={handleDeleteSession}
-        selectedModel={selectedModels}
+        selectedModels={selectedModels}
         selectedPersona={selectedPersona}
         onModelChange={(value) => setSelectedModels(value as string[])}
         onPersonaChange={setSelectedPersona}
@@ -156,33 +144,37 @@ export function ChatContainer() {
       />
 
       <section className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-hidden">
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="max-w-2xl text-center">
-                <h1 className="mb-4 text-5xl font-bold">
+        {messages.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-3xl px-6">
+              <div className="mb-10 text-center">
+                <h1 className="mb-4 text-6xl font-bold">
                   AI Fusion
                 </h1>
-
                 <p className="text-zinc-400">
-                  Compare multiple AI
-                  models side-by-side
+                  Compare multiple AI models side-by-side
                 </p>
               </div>
+              <ChatInput
+                onSend={handleSendMessage}
+              />
             </div>
-          ) : (
-            <ChatMessages
-              messages={messages}
-              loading={loading}
-            />
-          )}
-        </div>
-
-        <div className="border-t border-zinc-800 bg-zinc-950 p-4">
-          <ChatInput
-            onSend={handleSendMessage}
-          />
-        </div>
+          </div>
+        ):(
+          <>
+            <div className="flex-1 overflow-hidden">
+              <ChatMessages
+                messages={messages}
+                loading={loading}
+              />
+            </div>
+            <div className="border-t border-zinc-800 bg-zinc-950 p-4">
+              <ChatInput
+                onSend={handleSendMessage}
+              />
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

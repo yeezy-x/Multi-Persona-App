@@ -19,7 +19,8 @@ export async function generateAIResponse(
     const response=await client.chat.completions.create({
         model: modelId,
         temperature: 0.7,
-        messages
+        messages,
+        max_tokens: 400
     })
     return response.choices[0].message.content || "";
 }

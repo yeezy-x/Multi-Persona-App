@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
 import {createSession,saveMessage,getSessionById, getSessionMessages,deleteSession} from "../services/sessionService.js";
-import { generateAIResponse } from "../providers/openRouter.js";
 import { personas } from "../personas/index.js";
 import { ConversationMemory } from "../memory/conversationMemory.js";
 import {sendMessageSchema} from "../validators/chatValidators.js";
 import { updateSessionTitle } from "../services/sessionService.js";
+import { generateMultipleResponses } from "../chat/generateResponse.js";
 
 export async function createChatSession(_req: Request,res: Response) {
   try {
@@ -35,26 +35,56 @@ export async function sendMessage(req:Request,res:Response){
             })
         }
         const session=await getSessionById(sessionId);
-        if(!session!.title){
-          const generatedTitle=message.split("").slice(0,4).join(" ")
+        if (!session) {
+          return res.status(404).json({
+            success: false,
+            message: "Session not found",
+          });
+        }
+        if(!session.title){
+          const generatedTitle=message.split("").slice(0, 5).join(" ")
           await updateSessionTitle(sessionId,generatedTitle)
         }
         const memory=new ConversationMemory();
-        session!.messages.forEach((msg)=>{
-          if(msg.role==="user" || msg.role==="assistant"){
-            memory.addMessage(msg.role,msg.content);
+        session.messages.forEach((msg) => {
+          if (msg.role === "user") {
+            memory.addMessage(
+              "user",
+              msg.content
+            );
           }
-        })
-        const responses=await Promise.all(
-          models.map(async (modelId)=>({
-            model:modelId,
-            content:await generateAIResponse(
-              modelId,
-              selectedPersona.systemPrompt,
-              memory,
-              message)
-          }))
-        )
+          if (msg.role === "assistant") {
+            try {
+              const responses = JSON.parse(
+                msg.content
+              );
+
+              const mergedResponse =
+                responses
+                  .map(
+                    (r: any) =>
+                      `${r.model}:\n${r.content}`
+                  )
+                  .join("\n\n");
+
+              memory.addMessage(
+                "assistant",
+                mergedResponse
+              );
+            } catch {
+              memory.addMessage(
+                "assistant",
+                msg.content
+              );
+            }
+          }
+        });
+        const responses=await generateMultipleResponses(
+            models,
+            selectedPersona.systemPrompt,
+            memory,
+            message
+          )
         await saveMessage(sessionId,"user",message);
         await saveMessage(sessionId,"assistant",JSON.stringify(responses));
         res.status(200).json({
@@ -80,14 +110,18 @@ export async function getChatSession(req:Request<{sessionId: string}>,res:Respon
         message:"Session not found",
       })
     }
-    let messages=session.messages.map((msg)=>({
+    const messages=session.messages.map((msg)=>({
       role:msg.role,
       content:msg.role==="user"?msg.content:undefined,
       responses:msg.role==="assistant"?JSON.parse(msg.content):undefined,
     }))
     res.status(200).json({
       success:true,
-      messages,
+      session: {
+        id: session.id,
+        title: session.title,
+        messages,
+      },
     })
   }catch(error){
     res.status(500).json({

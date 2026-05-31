@@ -2,6 +2,7 @@
 
 import type { Message } from "@/types/chat";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { modelMap } from "@/lib/modelMap";
 
 type Props = {
   messages: Message[];

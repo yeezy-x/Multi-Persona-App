@@ -14,10 +14,10 @@ type Props = {
   onNewChat: () => void;
   onDelete: (id: string) => void;
 
-  selectedModel: string | string[];
+  selectedModels: string[];
   selectedPersona: string;
 
-  onModelChange: (value: string | string[] | Dispatch<SetStateAction<string[]>>) => void;
+  onModelChange: (models:string[]) => void;
   onPersonaChange: (value: string) => void;
 
   models: {
@@ -38,7 +38,7 @@ export function Sidebar({
   onNewChat,
   onDelete,
 
-  selectedModel,
+  selectedModels,
   selectedPersona,
 
   onModelChange,
@@ -47,8 +47,7 @@ export function Sidebar({
   models,
   personas,
 }: Props) {
-  const { user, logout } =
-    useAuth();
+  const { user, logout } =useAuth();
 
   return (
     <aside className="
@@ -187,57 +186,116 @@ export function Sidebar({
 
       {/* MODEL + PERSONA */}
 
-      <div className="
-        border-t
-        border-zinc-800
-        p-4
-        space-y-4
-      ">
+      <div
+        className="
+          border-t
+          border-zinc-800
+          p-4
+          space-y-5
+        "
+      >
         <div>
-          <p className="
-            mb-2
-            text-xs
-            uppercase
-            text-zinc-500
-          ">
-            Model
+          <p
+            className="
+              mb-3
+              text-xs
+              uppercase
+              tracking-wider
+              text-zinc-500
+            ">
+            Models
           </p>
 
-          <select
-            value={selectedModel}
-            onChange={(e) =>
-              onModelChange(
-                e.target.value
-              )
-            }
-            className="
-              w-full
-              rounded-lg
-              border
-              border-zinc-700
-              bg-zinc-900
-              px-3
-              py-2
-            "
-          >
-            {models.map((model) => (
-              <option
-                key={model.id}
-                value={model.id}
-              >
-                {model.name}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            {models.map((model) => {
+              const isSelected=selectedModels.includes(model.id);
+
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      onModelChange(
+                        selectedModels.filter(
+                          (id) =>
+                            id !== model.id
+                        )
+                      );
+                    } else {
+                      onModelChange([
+                        ...selectedModels,
+                        model.id,
+                      ]);
+                    }
+                  }}
+                  className={`
+                    w-full
+                    rounded-xl
+                    border
+                    p-3
+                    text-left
+                    transition
+
+                    ${
+                      isSelected
+                        ? `
+                          border-blue-500
+                          bg-blue-500/10
+                        `
+                        : `
+                          border-zinc-800
+                          bg-zinc-900
+                          hover:border-zinc-700
+                        `
+                    }
+                  `}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      {model.name}
+                    </span>
+
+                    <div
+                      className={`
+                        flex
+                        h-5
+                        w-5
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+
+                        ${
+                          isSelected
+                            ? `
+                              border-blue-500
+                              bg-blue-500
+                            `
+                            : `
+                              border-zinc-600
+                            `
+                        }
+                      `}
+                    >
+                      {isSelected && "✓"}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div>
-          <p className="
-            mb-2
-            text-xs
-            uppercase
-            text-zinc-500
-          ">
+          <p
+            className="
+              mb-2
+              text-xs
+              uppercase
+              tracking-wider
+              text-zinc-500
+            "
+          >
             Persona
           </p>
 
@@ -250,26 +308,23 @@ export function Sidebar({
             }
             className="
               w-full
-              rounded-lg
+              rounded-xl
               border
               border-zinc-700
               bg-zinc-900
               px-3
-              py-2
+              py-3
+              text-white
             "
           >
-            {personas.map(
-              (persona) => (
-                <option
-                  key={persona.id}
-                  value={
-                    persona.id
-                  }
-                >
-                  {persona.name}
-                </option>
-              )
-            )}
+            {personas.map((persona) => (
+              <option
+                key={persona.id}
+                value={persona.id}
+              >
+                {persona.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

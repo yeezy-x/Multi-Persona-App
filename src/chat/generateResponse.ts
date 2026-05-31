@@ -21,19 +21,27 @@ export async function generateMultipleResponses(
   memory: ConversationMemory,
   userPrompt: string
 ) {
-  const results =
-    await Promise.all(
-      models.map(async (model) => ({
+  console.log("MODELS RECEIVED:", models);
+
+  const results = await Promise.all(
+    models.map(async (model) => {
+      console.log("CALLING MODEL:", model);
+
+      const content =
+        await generateAIResponse(
+          model,
+          systemPrompt,
+          memory,
+          userPrompt
+        );
+
+      return {
         model,
-        content:
-          await generateAIResponse(
-            model,
-            systemPrompt,
-            memory,
-            userPrompt
-          ),
-      }))
-    );
+        content,
+      };
+    })
+  );
+
   return results;
 }
 
